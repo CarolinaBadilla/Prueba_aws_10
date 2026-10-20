@@ -39,16 +39,22 @@ data "tls_certificate" "github" {
 }
 
 resource "aws_iam_openid_connect_provider" "github" {
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.github.certificates[0].sha1_fingerprint]
+  url            = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
+
+  # Huellas SHA-1 recomendadas por AWS y GitHub para evitar fallos de rotación de certificados
+  thumbprint_list = [
+    data.tls_certificate.github.certificates[0].sha1_fingerprint,
+    "6938fd4d98bab03faadb97b34396831e3780aea1",
+    "1c58a3a8518e8759bf075b76b750d4f8d704fa7f"
+  ]
 }
 
 # -------------------------------------------------------------
 # 3. Rol IAM y Política de Mínimo Privilegio para GitHub Actions
 # -------------------------------------------------------------
 
-# Política de confianza (Trust Relationship): Solo tu repo y ramas permitidas
+# Política de confianza (Trust Relationship): Principio de Mínimo Privilegio
 data "aws_iam_policy_document" "github_actions_assume_role" {
   statement {
     effect  = "Allow"
@@ -59,17 +65,18 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
       identifiers = [aws_iam_openid_connect_provider.github.arn]
     }
 
+    # Audiencia estricta exigida por GitHub y AWS STS
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:aud"
       values   = ["sts.amazonaws.com"]
     }
 
-    # Restringe el acceso estrictamente a tu repositorio
+    # Restringe el acceso estrictamente a tu repositorio Y solo a la rama main
     condition {
-      test     = "StringLike"
+      test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_org}/${var.github_repo}:*"]
+      values   = ["repo:${var.github_org}/${var.github_repo}:ref:refs/heads/main"]
     }
   }
 }
