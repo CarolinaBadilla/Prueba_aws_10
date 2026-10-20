@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - database.yaml
+  - postgres-init-configmap.yaml
   - backend.yaml
   - frontend.yaml
   - nginx-configmap.yaml

@@ -25,6 +25,10 @@ spec:
               value: "EnterpriseSecurePass2026!"
             - name: POSTGRES_DB
               value: "enterprise_db"
+          volumeMounts:
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d/init.sql
+              subPath: init.sql
           resources:
             requests:
               memory: "64Mi"
@@ -32,15 +36,7 @@ spec:
             limits:
               memory: "128Mi"
               cpu: "150m"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres-service
-  namespace: enterprise-apps
-spec:
-  selector:
-    app: postgres-db
-  ports:
-    - port: 5432
-      targetPort: 5432
+      volumes:
+        - name: init-script
+          configMap:
+            name: postgres-init-script
