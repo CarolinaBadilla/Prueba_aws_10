@@ -38,33 +38,26 @@ module "eks" {
   version = "~> 20.0"
 
   cluster_name    = var.cluster_name
-  cluster_version = "1.30"
+  cluster_version = "1.31" # Alinear con la versión real en AWS
 
-  # El API server es accesible públicamente para interactuar con kubectl desde tu terminal
   cluster_endpoint_public_access = true
 
-  # Conecta el clúster a la VPC y coloca los nodos de trabajo en las subredes privadas
   vpc_id                   = module.vpc.vpc_id
   subnet_ids               = module.vpc.private_subnets
   control_plane_subnet_ids = module.vpc.private_subnets
 
-  # OIDC habilitado para autenticación segura pod-a-AWS (IRSA)
-  enable_irsa = true
-
-  # Permite que el usuario/rol que corre Terraform sea administrador del clúster automáticamente
+  enable_irsa                              = true
   enable_cluster_creator_admin_permissions = true
 
-  # Grupo de nodos administrados (Worker Nodes)
   eks_managed_node_groups = {
     general = {
       name           = "enterprise-node-group"
-      instance_types = ["t3.micro"]
-
-      ami_type = "AL2023_x86_64_STANDARD"
+      instance_types = ["t3.small"] # 2 GB RAM y hasta 11 pods por nodo
+      ami_type       = "AL2023_x86_64_STANDARD"
 
       min_size     = 1
       max_size     = 3
-      desired_size = 2
+      desired_size = 2 # Con 2 nodos t3.small alcanza de sobra
 
       capacity_type = "ON_DEMAND"
 
@@ -77,6 +70,5 @@ module "eks" {
 
   tags = {
     Environment = "dev"
-    NodeGroup   = "general-workloads"
   }
 }
