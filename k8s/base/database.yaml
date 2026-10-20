@@ -26,7 +26,7 @@ spec:
             - name: POSTGRES_DB
               value: "enterprise_db"
           volumeMounts:
-            - name: init-script
+            - name: init-script-volume
               mountPath: /docker-entrypoint-initdb.d/init.sql
               subPath: init.sql
           resources:
@@ -37,6 +37,18 @@ spec:
               memory: "128Mi"
               cpu: "150m"
       volumes:
-        - name: init-script
+        - name: init-script-volume
           configMap:
             name: postgres-init-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: enterprise-apps
+spec:
+  selector:
+    app: postgres-db
+  ports:
+    - port: 5432
+      targetPort: 5432
