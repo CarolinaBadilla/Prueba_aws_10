@@ -27,3 +27,18 @@ output "configure_kubectl" {
   description = "Comando para configurar la conexión de kubectl con el clúster"
   value       = "aws eks --region ${var.aws_region} update-kubeconfig --name ${module.eks.cluster_name}"
 }
+
+output "github_actions_role_arn" {
+  description = "ARN del rol que asumirá GitHub Actions mediante OIDC"
+  value       = aws_iam_role.github_actions.arn
+}
+
+output "ecr_backend_url" {
+  description = "URL del registro ECR para Backend"
+  value       = aws_ecr_repository.backend.repository_url
+}
+
+output "ecr_frontend_url" {
+  description = "URL del registro ECR para Frontend"
+  value       = aws_ecr_repository.frontend.repository_url
+}

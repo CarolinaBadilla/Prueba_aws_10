@@ -1,0 +1,99 @@
+name: DevSecOps CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  id-token: write   # Obligatorio para solicitar el token OIDC a AWS
+  contents: read    # Para clonar el repositorio
+  security-events: write # Para registrar alertas de seguridad
+
+jobs:
+  security-audit:
+    name: Shift-Left Security Scans
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Necesario para que Gitleaks revise todo el historial
+
+      # 1. Escaneo de secretos
+      - name: Run Gitleaks (Secret Detection)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Análisis estático de código fuente (SAST)
+      - name: Run Semgrep (SAST)
+        run: |
+          python3 -m pip install semgrep
+          semgrep scan --config=auto --error app/backend
+
+      # 3. Auditoría de Infraestructura como Código (Checkov)
+      - name: Run Checkov (Terraform Scan)
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+          soft_fail: true # soft_fail en lab para no bloquear si hay advertencias menores de dev
+
+      # 4. Auditoría de dependencias (SCA)
+      - name: Run Trivy Dependency Scanner (SCA)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'app/'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+  build-and-push:
+    name: Build & Push to Amazon ECR
+    needs: security-audit
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          audience: sts.amazonaws.com
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Compilar y escanear imagen Backend
+      - name: Build Backend Docker Image
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/enterprise-backend:${{ github.sha }} ./app/backend
+          docker tag ${{ steps.login-ecr.outputs.registry }}/enterprise-backend:${{ github.sha }} ${{ steps.login-ecr.outputs.registry }}/enterprise-backend:latest
+
+      - name: Scan Backend Image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.login-ecr.outputs.registry }}/enterprise-backend:${{ github.sha }}
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL'
+
+      # Compilar imagen Frontend
+      - name: Build Frontend Docker Image
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/enterprise-frontend:${{ github.sha }} ./app/frontend
+          docker tag ${{ steps.login-ecr.outputs.registry }}/enterprise-frontend:${{ github.sha }} ${{ steps.login-ecr.outputs.registry }}/enterprise-frontend:latest
+
+      # Push de ambas imágenes a ECR
+      - name: Push Images to Amazon ECR
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/enterprise-backend:${{ github.sha }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/enterprise-backend:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/enterprise-frontend:${{ github.sha }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/enterprise-frontend:latest

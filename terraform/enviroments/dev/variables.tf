@@ -15,3 +15,16 @@ variable "cluster_name" {
   type        = string
   default     = "enterprise-dev-eks"
 }
+
+variable "github_org" {
+  description = "Usuario u organización de GitHub"
+  type        = string
+  # Reemplaza con tu usuario exacto de GitHub
+  default     = "CarolinaBadilla"
+}
+
+variable "github_repo" {
+  description = "Nombre del repositorio en GitHub"
+  type        = string
+  default     = "Prueba_aws_10"
+}
