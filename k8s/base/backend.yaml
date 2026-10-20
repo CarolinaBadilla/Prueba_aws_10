@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-app
+  namespace: enterprise-apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-app
+  template:
+    metadata:
+      labels:
+        app: backend-app
+    spec:
+      containers:
+        - name: backend
+          image: 512902043510.dkr.ecr.us-east-1.amazonaws.com/enterprise-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            - name: PORT
+              value: "5000"
+            - name: DB_HOST
+              value: "postgres-service"
+            - name: DB_USER
+              value: "postgres"
+            - name: DB_PASSWORD
+              value: "EnterpriseSecurePass2026!"
+            - name: DB_NAME
+              value: "enterprise_db"
+            - name: DB_PORT
+              value: "5432"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "150m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: enterprise-apps
+spec:
+  selector:
+    app: backend-app
+  ports:
+    - port: 5000
+      targetPort: 5000

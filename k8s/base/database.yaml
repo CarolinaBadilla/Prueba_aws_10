@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-db
+  namespace: enterprise-apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-db
+  template:
+    metadata:
+      labels:
+        app: postgres-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              value: "EnterpriseSecurePass2026!"
+            - name: POSTGRES_DB
+              value: "enterprise_db"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "150m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: enterprise-apps
+spec:
+  selector:
+    app: postgres-db
+  ports:
+    - port: 5432
+      targetPort: 5432
