@@ -22,7 +22,10 @@ spec:
             - name: POSTGRES_USER
               value: "postgres"
             - name: POSTGRES_PASSWORD
-              value: "EnterpriseSecurePass2026!"
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
             - name: POSTGRES_DB
               value: "enterprise_db"
           volumeMounts:

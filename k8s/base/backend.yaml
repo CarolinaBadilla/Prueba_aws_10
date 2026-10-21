@@ -27,7 +27,10 @@ spec:
             - name: DB_USER
               value: "postgres"
             - name: DB_PASSWORD
-              value: "EnterpriseSecurePass2026!"
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
             - name: DB_NAME
               value: "enterprise_db"
             - name: DB_PORT

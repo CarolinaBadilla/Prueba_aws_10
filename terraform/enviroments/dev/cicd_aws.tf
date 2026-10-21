@@ -126,3 +126,46 @@ resource "aws_iam_role_policy_attachment" "github_actions_attach" {
   role       = aws_iam_role.github_actions.name
   policy_arn = aws_iam_policy.github_actions_ecr.arn
 }
+
+# Obtener datos del secreto creado
+data "aws_secretsmanager_secret" "db_credentials" {
+  name = "enterprise/dev/db-credentials"
+}
+
+# Política de permisos mínimos: Solo leer el valor de este secreto
+data "aws_iam_policy_document" "eso_secrets_policy" {
+  statement {
+    effect    = "Allow"
+    actions   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+    resources = [data.aws_secretsmanager_secret.db_credentials.arn]
+  }
+}
+
+resource "aws_iam_policy" "eso_secrets_policy" {
+  name   = "enterprise-dev-eso-secrets-policy"
+  policy = data.aws_iam_policy_document.eso_secrets_policy.json
+}
+
+# Rol asumible por la ServiceAccount de Kubernetes mediante OIDC
+module "eso_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.0"
+
+  role_name = "enterprise-dev-eso-role"
+
+  role_policy_arns = {
+    policy = aws_iam_policy.eso_secrets_policy.arn
+  }
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["external-secrets:external-secrets-sa"]
+    }
+  }
+}
+
+output "eso_role_arn" {
+  description = "ARN del rol para External Secrets Operator"
+  value       = module.eso_irsa.iam_role_arn
+}
