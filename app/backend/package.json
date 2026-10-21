@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node --require ./tracer.js server.js"
   },
   "dependencies": {
+    "@opentelemetry/auto-instrumentations-node": "^0.81.2",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.223.0",
+    "@opentelemetry/sdk-node": "^0.223.0",
+    "cors": "^2.8.5",
     "express": "^4.19.2",
-    "pg": "^8.11.5",
-    "cors": "^2.8.5"
+    "pg": "^8.11.5"
   }
 }
