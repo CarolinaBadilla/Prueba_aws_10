@@ -8,3 +8,6 @@ resources:
   - frontend.yaml
   - nginx-configmap.yaml
   - hpa.yaml
+  - secret-store.yaml
+  - external-secret.yaml
+  - ingress.yaml

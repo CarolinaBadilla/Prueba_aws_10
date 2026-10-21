@@ -36,7 +36,7 @@ const initDb = async () => {
 setTimeout(initDb, 3000);
 
 // Endpoint crítico para Liveness y Readiness Probes de Kubernetes
-app.get('/healthz', async (req, res) => {
+app.get(['/healthz', '/api/healthz'], async (req, res) => {
   try {
     await pool.query('SELECT 1');
     res.status(200).json({ status: 'healthy', database: 'connected' });

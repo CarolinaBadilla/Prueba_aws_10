@@ -42,7 +42,7 @@ metadata:
   name: frontend-service
   namespace: enterprise-apps
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: frontend-app
   ports:
